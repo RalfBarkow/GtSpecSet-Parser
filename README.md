@@ -3,7 +3,7 @@
 
 ```st
 Metacello new
-	repository: '';
+	repository: 'github://RalfBarkow/GtSpecSet-Parser:main/src';
 	baseline: 'GtSpecSetParser';
 	load
 ```
