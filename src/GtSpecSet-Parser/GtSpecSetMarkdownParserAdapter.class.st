@@ -108,3 +108,14 @@ GtSpecSetMarkdownParserAdapter class >> priority [
 { #category : #parsing }
 GtSpecSetMarkdownParserAdapter class >> skeletonFor: h [ 
 ]
+
+{ #category : #utilities }
+GtSpecSetMarkdownParserAdapter class >> splitFromString: aString into: aDirectoryRef [
+	| master res |
+	aDirectoryRef ensureCreateDirectory.
+	master := FileSystem memory root / 'MASTER.md'.
+	master ensureCreateFile.
+	master writeStreamDo: [ :ws | ws nextPutAll: aString ].
+	res := self parse: master.
+	^ res writeFilesIn: aDirectoryRef
+]
