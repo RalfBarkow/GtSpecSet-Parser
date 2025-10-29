@@ -7,7 +7,5 @@ Class {
 { #category : #baseline }
 BaselineOfGtSpecSetParser >> baseline: spec [
 	<baseline>
-		^ spec for: #common do: [
-			spec package: 'GtSpecSetParser'
-		]
+	^ spec for: #common do: [ spec package: 'GtSpecSetParser' ]
 ]
