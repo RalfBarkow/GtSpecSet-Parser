@@ -28,6 +28,16 @@ GtSpecSetMarkdownParserAdapter class >> ensureInstalled [
 					(coll respondsTo: #add:) ifTrue: [ coll add: self ] ] ]
 ]
 
+{ #category : #'registry class' }
+GtSpecSetMarkdownParserAdapter class >> ensureOnInputContextOf: anInput [
+	| ctxClass ctx |
+	ctxClass := Smalltalk at: #GtInputContext ifAbsent: [ nil ].
+	ctx := (anInput respondsTo: #context) ifTrue: [ anInput context ] ifFalse: [ nil ].
+	ctx isNil ifTrue: [ ctx := (ctxClass notNil and: [ ctxClass respondsTo: #current ])
+		ifTrue: [ ctxClass current ] ifFalse: [ nil ] ].
+	ctx ifNotNil: [ (ctx respondsTo: #registerParser:) ifTrue: [ ctx registerParser: self ] ]
+]
+
 { #category : #'as yet unclassified' }
 GtSpecSetMarkdownParserAdapter class >> exampleDiagnoseDiskSPEC [
 	"Point this to a real SPEC-like file in your workspace to inspect selection."
@@ -175,32 +185,18 @@ GtSpecSetMarkdownParserAdapter class >> exampleWhyMemorySPEC [
 { #category : #'examples class' }
 GtSpecSetMarkdownParserAdapter class >> exampleWhyMemorySPEC_fixed [
 	<gtExample>
-	| fr input why winner candidates ctxClass ctx |
+	| fr input why winner candidates |
 	fr := FileSystem memory root / 'SPEC.md'.
 	fr ensureCreateFile.
-	fr writeStreamDo: [ :s |
-		s nextPutAll: '# SPEC'; cr; nextPutAll: 'Title'; cr ].
-
+	fr writeStreamDo: [ :s | s nextPutAll: '# SPEC'; cr; nextPutAll: 'Title'; cr ].
 	input := fr asGtInputFile.
-
-	"Register on the specific input context (prevents Null winner)"
-	ctxClass := Smalltalk at: #GtInputContext ifAbsent: [ nil ].
-	ctx := (input respondsTo: #context) ifTrue: [ input context ] ifFalse: [ nil ].
-	ctx isNil ifTrue: [ ctx := (ctxClass notNil and: [ ctxClass respondsTo: #current ])
-		ifTrue: [ ctxClass current ] ifFalse: [ nil ] ].
-	ctx ifNotNil: [ (ctx respondsTo: #registerParser:) ifTrue: [ ctx registerParser: self ] ].
-
+	self ensureOnInputContextOf: input.  "<<< key line"
 	why := input selectionExplanation.
-
 	winner := self valueFor: #winner in: why ifAbsent: [ '<<unknown>>' ].
 	candidates := self valueFor: #candidates in: why
 		ifAbsent: [ (input respondsTo: #candidateParsers)
-			ifTrue: [ input candidateParsers collect: #name ]
-			ifFalse: [ #() ] ].
-
-	^ { #winner -> winner.
-	     #candidates -> candidates.
-	     #path -> fr pathString }
+			ifTrue: [ input candidateParsers collect: #name ] ifFalse: [ #() ] ].
+	^ { #winner->winner. #candidates->candidates. #path->fr pathString }
 ]
 
 { #category : #parsing }
@@ -218,6 +214,12 @@ GtSpecSetMarkdownParserAdapter class >> firstNonEmptyLineFrom: aFileReference if
 	^ noneBlock value
 ]
 
+{ #category : #'registry class' }
+GtSpecSetMarkdownParserAdapter class >> gtDeclareAsInputParser [
+	<gtInputParser>
+	^ self
+]
+
 { #category : #parsing }
 GtSpecSetMarkdownParserAdapter class >> headingNames [
 	^ #('# SPEC' '# IMPLEMENTATION_PLAN' '# RESEARCH' '# WORKLOG')
@@ -226,6 +228,13 @@ GtSpecSetMarkdownParserAdapter class >> headingNames [
 { #category : #parsing }
 GtSpecSetMarkdownParserAdapter class >> headingRegex [
 	^ '(?m)^#\\s+(SPEC|IMPLEMENTATION_PLAN|RESEARCH|WORKLOG)\\s*$' asRegex
+]
+
+{ #category : #'registry class' }
+GtSpecSetMarkdownParserAdapter class >> initialize [
+	"Idempotent global install at load time."
+	[ self installEverywhere ] on: Error do: [ :e | e ].
+	^ self
 ]
 
 { #category : #registry }
