@@ -9,6 +9,13 @@ Class {
 	#category : #'GtSpecSet-Model'
 }
 
+{ #category : #'instance creation' }
+GtSpecSetSplitResult class >> fromParts: aDict [
+	^ self new
+		parts: aDict;
+		yourself
+]
+
 { #category : #examples }
 GtSpecSetSplitResult class >> gtExampleWriteToTemp [
 	<gtExample>
@@ -32,7 +39,7 @@ GtSpecSetSplitResult >> order: aCollection [
 
 { #category : #accessing }
 GtSpecSetSplitResult >> parts [
-	^ parts
+	^ parts ifNil: [ Dictionary new ]
 ]
 
 { #category : #accessing }
@@ -68,29 +75,19 @@ GtSpecSetSplitResult >> writeFiles [
 
 { #category : #writing }
 GtSpecSetSplitResult >> writeFilesIn: aDirectoryRef [
-	| mapping localParts |
-	localParts := self validatedParts.
-
-	mapping := {#SPEC -> 'SPEC.md'.
-			#IMPLEMENTATION_PLAN -> 'IMPLEMENTATION_PLAN.md'.
-			#RESEARCH -> 'RESEARCH.md'.
-			#WORKLOG -> 'WORKLOG.md'} asDictionary.
-
+	| mapping |
 	aDirectoryRef ensureCreateDirectory.
-
+	mapping := {#spec -> 'SPEC.md'.
+			#plan -> 'IMPLEMENTATION_PLAN.md'.
+			#research -> 'RESEARCH.md'.
+			#worklog -> 'WORKLOG.md'} asDictionary.
 	mapping
-		keysAndValuesDo: [ :key :fileName | 
-			| targetRef newText |
-			newText := localParts at: key ifAbsent: [ '' ].	"Coerce anything non-textual to a String (defensive), but warn in Transcript."
-			(newText isString or: [ newText isKindOf: Text ])
-				ifFalse: [ Transcript
-						cr;
-						show: '[GtSpecSetSplitResult] WARNING: ' , key printString , ' value was '
-								, newText class name , '. Coercing via #asString.';
-						cr.
-					newText := newText asString ].
-			targetRef := aDirectoryRef / fileName.
-			(self needsWrite: targetRef with: newText)
-				ifTrue: [ self writeAll: newText to: targetRef ] ].
+		keysAndValuesDo: [ :key :name | 
+			(self parts at: key ifAbsent: [ nil ])
+				ifNotNil: [ :txt | 
+					| f |
+					f := aDirectoryRef / name.
+					f ensureCreateFile.
+					f writeStreamDo: [ :ws | ws nextPutAll: txt ] ] ].
 	^ aDirectoryRef
 ]
